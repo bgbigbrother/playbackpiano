@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Piano keys background -->
+  <rect width="32" height="32" fill="#1a1a1a" rx="4"/>
+  
+  <!-- White keys -->
+  <rect x="4" y="8" width="4" height="16" fill="#ffffff" rx="0.5"/>
+  <rect x="9" y="8" width="4" height="16" fill="#ffffff" rx="0.5"/>
+  <rect x="14" y="8" width="4" height="16" fill="#ffffff" rx="0.5"/>
+  <rect x="19" y="8" width="4" height="16" fill="#ffffff" rx="0.5"/>
+  <rect x="24" y="8" width="4" height="16" fill="#ffffff" rx="0.5"/>
+  
+  <!-- Black keys -->
+  <rect x="6.5" y="8" width="3" height="10" fill="#1a1a1a" rx="0.5"/>
+  <rect x="11.5" y="8" width="3" height="10" fill="#1a1a1a" rx="0.5"/>
+  <rect x="21.5" y="8" width="3" height="10" fill="#1a1a1a" rx="0.5"/>
+</svg>

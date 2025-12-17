@@ -1,0 +1,314 @@
+{
+    "whiteKeys": [
+      {
+        "key": "Z",
+        "note": "C2",
+        "noteName": "C",
+        "octave": 2
+      },
+      {
+        "key": "X",
+        "note": "D2",
+        "noteName": "D",
+        "octave": 2
+      },
+      {
+        "key": "C",
+        "note": "E2",
+        "noteName": "E",
+        "octave": 2
+      },
+      {
+        "key": "V",
+        "note": "F2",
+        "noteName": "F",
+        "octave": 2
+      },
+      {
+        "key": "B",
+        "note": "G2",
+        "noteName": "G",
+        "octave": 2
+      },
+      {
+        "key": "N",
+        "note": "A2",
+        "noteName": "A",
+        "octave": 2
+      },
+      {
+        "key": "M",
+        "note": "B2",
+        "noteName": "B",
+        "octave": 2
+      },
+      {
+        "key": "Q",
+        "note": "C3",
+        "noteName": "C",
+        "octave": 3
+      },
+      {
+        "key": "W",
+        "note": "D3",
+        "noteName": "D",
+        "octave": 3
+      },
+      {
+        "key": "E",
+        "note": "E3",
+        "noteName": "E",
+        "octave": 3
+      },
+      {
+        "key": "R",
+        "note": "F3",
+        "noteName": "F",
+        "octave": 3
+      },
+      {
+        "key": "T",
+        "note": "G3",
+        "noteName": "G",
+        "octave": 3
+      },
+      {
+        "key": "Y",
+        "note": "A3",
+        "noteName": "A",
+        "octave": 3
+      },
+      {
+        "key": "U",
+        "note": "B3",
+        "noteName": "B",
+        "octave": 3
+      },
+      {
+        "key": "I",
+        "note": "C4",
+        "noteName": "C",
+        "octave": 4
+      },
+      {
+        "key": "O",
+        "note": "D4",
+        "noteName": "D",
+        "octave": 4
+      },
+      {
+        "key": "P",
+        "note": "E4",
+        "noteName": "E",
+        "octave": 4
+      },
+      {
+        "key": "[",
+        "note": "F4",
+        "noteName": "F",
+        "octave": 4
+      },
+      {
+        "key": "]",
+        "note": "G4",
+        "noteName": "G",
+        "octave": 4
+      },
+      {
+        "key": "\\",
+        "note": "A4",
+        "noteName": "A",
+        "octave": 4
+      },
+      {
+        "key": ";",
+        "note": "B4",
+        "noteName": "B",
+        "octave": 4
+      },
+      {
+        "key": "'",
+        "note": "C5",
+        "noteName": "C",
+        "octave": 5
+      },
+      {
+        "key": ",",
+        "note": "D5",
+        "noteName": "D",
+        "octave": 5
+      },
+      {
+        "key": ".",
+        "note": "E5",
+        "noteName": "E",
+        "octave": 5
+      },
+      {
+        "key": "/",
+        "note": "F5",
+        "noteName": "F",
+        "octave": 5
+      },
+      {
+        "key": "1",
+        "note": "G5",
+        "noteName": "G",
+        "octave": 5
+      },
+      {
+        "key": "8",
+        "note": "A5",
+        "noteName": "A",
+        "octave": 5
+      },
+      {
+        "key": null,
+        "note": "B5",
+        "noteName": "B",
+        "octave": 5
+      }
+    ],
+    "blackKeys": [
+      {
+        "key": "S",
+        "noteSharp": "C#2",
+        "noteFlat": "Db2",
+        "noteName": "C#",
+        "octave": 2
+      },
+      {
+        "key": "D",
+        "noteSharp": "D#2",
+        "noteFlat": "Eb2",
+        "noteName": "D#",
+        "octave": 2
+      },
+      {
+        "key": "G",
+        "noteSharp": "F#2",
+        "noteFlat": "Gb2",
+        "noteName": "F#",
+        "octave": 2
+      },
+      {
+        "key": "H",
+        "noteSharp": "G#2",
+        "noteFlat": "Ab2",
+        "noteName": "G#",
+        "octave": 2
+      },
+      {
+        "key": "J",
+        "noteSharp": "A#2",
+        "noteFlat": "Bb2",
+        "noteName": "A#",
+        "octave": 2
+      },
+      {
+        "key": "2",
+        "noteSharp": "C#3",
+        "noteFlat": "Db3",
+        "noteName": "C#",
+        "octave": 3
+      },
+      {
+        "key": "3",
+        "noteSharp": "D#3",
+        "noteFlat": "Eb3",
+        "noteName": "D#",
+        "octave": 3
+      },
+      {
+        "key": "5",
+        "noteSharp": "F#3",
+        "noteFlat": "Gb3",
+        "noteName": "F#",
+        "octave": 3
+      },
+      {
+        "key": "6",
+        "noteSharp": "G#3",
+        "noteFlat": "Ab3",
+        "noteName": "G#",
+        "octave": 3
+      },
+      {
+        "key": "7",
+        "noteSharp": "A#3",
+        "noteFlat": "Bb3",
+        "noteName": "A#",
+        "octave": 3
+      },
+      {
+        "key": "9",
+        "noteSharp": "C#4",
+        "noteFlat": "Db4",
+        "noteName": "C#",
+        "octave": 4
+      },
+      {
+        "key": "0",
+        "noteSharp": "D#4",
+        "noteFlat": "Eb4",
+        "noteName": "D#",
+        "octave": 4
+      },
+      {
+        "key": "=",
+        "noteSharp": "F#4",
+        "noteFlat": "Gb4",
+        "noteName": "F#",
+        "octave": 4
+      },
+      {
+        "key": "A",
+        "noteSharp": "G#4",
+        "noteFlat": "Ab4",
+        "noteName": "G#",
+        "octave": 4
+      },
+      {
+        "key": "F",
+        "noteSharp": "A#4",
+        "noteFlat": "Bb4",
+        "noteName": "A#",
+        "octave": 4
+      },
+      {
+        "key": "K",
+        "noteSharp": "C#5",
+        "noteFlat": "Db5",
+        "noteName": "C#",
+        "octave": 5
+      },
+      {
+        "key": "L",
+        "noteSharp": "D#5",
+        "noteFlat": "Eb5",
+        "noteName": "D#",
+        "octave": 5
+      },
+      {
+        "key": "`",
+        "noteSharp": "F#5",
+        "noteFlat": "Gb5",
+        "noteName": "F#",
+        "octave": 5
+      },
+      {
+        "key": "4",
+        "noteSharp": "G#5",
+        "noteFlat": "Ab5",
+        "noteName": "G#",
+        "octave": 5
+      },
+      {
+        "key": "-",
+        "noteSharp": "A#5",
+        "noteFlat": "Bb5",
+        "noteName": "A#",
+        "octave": 5
+      }
+    ]
+}
