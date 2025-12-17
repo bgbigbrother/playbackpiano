@@ -2,8 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, beforeAll, vi } from 'vitest';
 import * as fc from 'fast-check';
 import { PianoKey } from '../components/PianoKey';
-import { PianoKeyboard } from '../components/PianoKeyboard';
-import { initializeKeyboardMapping, getPianoNoteForKey } from '../utils/keyboardLayout';
+import { initializeKeyboardMapping } from '../utils/keyboardLayout';
 
 /**
  * Property-Based Tests for Visual Feedback

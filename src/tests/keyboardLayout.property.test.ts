@@ -255,7 +255,7 @@ describe('Keyboard Layout - Property-Based Tests', () => {
     const validBlackKeyPositions = fc.constantFrom('C', 'D', 'F', 'G', 'A');
 
     fc.assert(
-      fc.property(whiteKeyCountArb, validBlackKeyPositions, (whiteKeyCount, whiteNoteName) => {
+      fc.property(whiteKeyCountArb, validBlackKeyPositions, (whiteKeyCount, _whiteNoteName) => {
         // Calculate layout parameters
         const whiteKeyWidth = 100 / whiteKeyCount;
         

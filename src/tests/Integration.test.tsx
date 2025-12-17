@@ -186,9 +186,7 @@ describe('Integration Tests - Complete User Flows', () => {
 
       // Keyboard input should be disabled during loading
       // No audio playback should be attempted
-      const audioWarnings = consoleSpy.mock.calls.filter(
-        call => call[0]?.includes?.('AudioEngine not ready')
-      );
+      // Check if any audio-related warnings were logged
       
       // Either no warnings (input disabled) or warnings about not ready (input attempted but blocked)
       // Both are acceptable behaviors

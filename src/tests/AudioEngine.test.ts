@@ -100,7 +100,6 @@ describe('AudioEngine - Error Scenarios', () => {
     it('should handle initialization failure gracefully', async () => {
       if (audioEngine && audioEngine.isInitialized) {
         // Mock Sampler to fail loading
-        const originalSampler = Tone.Sampler;
         vi.spyOn(Tone, 'Sampler').mockImplementation(function(this: any, options: any) {
           // Simulate loading failure by calling onerror
           setTimeout(() => {

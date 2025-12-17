@@ -76,7 +76,7 @@ describe('Unmapped Key Rejection - Property-Based Tests', () => {
     fc.assert(
       fc.property(unmappedKeyArb, (unmappedKey) => {
         // Arrange: Render the hook
-        const { result } = renderHook(() => useKeyboardInput({
+        renderHook(() => useKeyboardInput({
           onKeyPress,
           onKeyRelease,
           enabled: true
@@ -135,7 +135,7 @@ describe('Unmapped Key Rejection - Property-Based Tests', () => {
         const localOnKeyRelease = vi.fn();
         
         // Arrange
-        const { result, unmount } = renderHook(() => useKeyboardInput({
+        const { unmount } = renderHook(() => useKeyboardInput({
           onKeyPress: localOnKeyPress,
           onKeyRelease: localOnKeyRelease,
           enabled: true
@@ -244,7 +244,7 @@ describe('Unmapped Key Rejection - Property-Based Tests', () => {
     fc.assert(
       fc.property(unmappedKeyArb, (unmappedKey) => {
         // Arrange
-        const { result } = renderHook(() => useKeyboardInput({
+        renderHook(() => useKeyboardInput({
           onKeyPress,
           onKeyRelease,
           enabled: true
@@ -319,7 +319,7 @@ describe('Unmapped Key Rejection - Property-Based Tests', () => {
     fc.assert(
       fc.property(anyUnmappedKeyArb, (unmappedKey) => {
         // Arrange
-        const { result } = renderHook(() => useKeyboardInput({
+        renderHook(() => useKeyboardInput({
           onKeyPress,
           onKeyRelease,
           enabled: true

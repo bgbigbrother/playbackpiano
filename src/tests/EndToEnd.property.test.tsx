@@ -2,7 +2,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as fc from 'fast-check';
 import App from '../App';
-import { AudioEngine } from '../utils/AudioEngine';
+// AudioEngine imported for type checking but not used in test environment
 import { getPianoNoteForKey } from '../utils/keyboardLayout';
 
 /**
