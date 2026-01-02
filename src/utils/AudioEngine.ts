@@ -1,4 +1,7 @@
 import * as Tone from 'tone';
+import { debugLogger } from './debugLogger';
+import { findBestSampleSource, checkNetworkConnectivity } from './sampleFallbacks';
+import { performanceMonitor } from './performanceMonitor';
 
 // Extend Window interface for Web Audio API compatibility
 declare global {
@@ -29,6 +32,8 @@ export class AudioEngine {
   private activeNotes: Set<string> = new Set(); // Track currently playing notes
 
   constructor() {
+    debugLogger.info('AudioEngine: Constructor called');
+    
     // Initialize Tone.js context with error handling
     this.initializeToneContext();
     
@@ -36,7 +41,11 @@ export class AudioEngine {
     // 'interactive' provides the best balance for real-time playback
     if (Tone.context.rawContext) {
       // Already set during context creation, but we can verify
-      console.log('Audio context latency hint:', Tone.context.latencyHint);
+      debugLogger.info('AudioEngine: Audio context latency hint', { 
+        latencyHint: Tone.context.latencyHint,
+        sampleRate: Tone.context.sampleRate,
+        state: Tone.context.state
+      });
     }
   }
 
@@ -45,8 +54,11 @@ export class AudioEngine {
    */
   private initializeToneContext(): void {
     try {
+      debugLogger.info('AudioEngine: Initializing Tone.js context');
+      
       // Check if Web Audio API is available
       if (!window.AudioContext && !window.webkitAudioContext) {
+        debugLogger.error('AudioEngine: Web Audio API not supported');
         this._error = {
           type: 'CONTEXT_UNAVAILABLE',
           message: 'Web Audio API is not supported in this browser'
@@ -56,6 +68,7 @@ export class AudioEngine {
 
       // Ensure Tone.js context is available
       if (!Tone.context) {
+        debugLogger.error('AudioEngine: Tone.js context could not be created');
         this._error = {
           type: 'CONTEXT_UNAVAILABLE',
           message: 'Tone.js audio context could not be created'
@@ -64,15 +77,21 @@ export class AudioEngine {
       }
 
       // Check context state
+      debugLogger.info('AudioEngine: Context state', { 
+        state: Tone.context.state,
+        sampleRate: Tone.context.sampleRate
+      });
+      
       if (Tone.context.state === 'suspended') {
-        console.log('Audio context suspended, will resume on user interaction');
+        debugLogger.warn('AudioEngine: Audio context suspended, will resume on user interaction');
       } else if (Tone.context.state !== 'running') {
-        console.log('Audio context ready, waiting for user interaction');
+        debugLogger.info('AudioEngine: Audio context ready, waiting for user interaction');
       }
 
       this._isInitialized = true;
+      debugLogger.info('AudioEngine: Context initialization successful');
     } catch (error) {
-      console.error('Failed to initialize Tone.js context:', error);
+      debugLogger.error('AudioEngine: Failed to initialize Tone.js context', { error });
       this._error = {
         type: 'CONTEXT_UNAVAILABLE',
         message: 'Web Audio API not available',
@@ -86,31 +105,56 @@ export class AudioEngine {
    * Load piano samples and initialize the sampler with retry logic
    */
   async initialize(): Promise<void> {
+    debugLogger.info('AudioEngine: Initialize called', { 
+      isLoaded: this._isLoaded,
+      isInitialized: this._isInitialized 
+    });
+    
     if (this._isLoaded) {
+      debugLogger.info('AudioEngine: Already loaded, skipping initialization');
       return;
     }
 
-    return this.initializeWithRetry();
+    return performanceMonitor.monitorOperation('AudioEngine.initialize', () => 
+      this.initializeWithRetry()
+    );
   }
 
   /**
    * Initialize with exponential backoff retry logic
    */
   private async initializeWithRetry(): Promise<void> {
+    debugLogger.info('AudioEngine: Starting initialization with retry', { 
+      retryCount: this.retryCount,
+      maxRetries: this.maxRetries 
+    });
+    
     try {
       await this.attemptInitialization();
       this.retryCount = 0; // Reset retry count on success
+      debugLogger.info('AudioEngine: Initialization successful');
     } catch (error) {
+      debugLogger.error('AudioEngine: Initialization attempt failed', { 
+        error,
+        retryCount: this.retryCount,
+        maxRetries: this.maxRetries 
+      });
+      
       if (this.retryCount < this.maxRetries) {
         this.retryCount++;
         const delay = this.retryDelay * Math.pow(2, this.retryCount - 1); // Exponential backoff
         
-        console.warn(`Sample loading failed, retrying in ${delay}ms (attempt ${this.retryCount}/${this.maxRetries})`);
+        debugLogger.warn('AudioEngine: Retrying initialization', {
+          attempt: this.retryCount,
+          maxRetries: this.maxRetries,
+          delay
+        });
         
         await new Promise(resolve => setTimeout(resolve, delay));
         return this.initializeWithRetry();
       } else {
         // Max retries reached
+        debugLogger.error('AudioEngine: Max retries reached, initialization failed');
         this._error = {
           type: 'SAMPLE_LOADING_FAILED',
           message: `Failed to load piano samples after ${this.maxRetries} attempts`,
@@ -125,82 +169,73 @@ export class AudioEngine {
    * Attempt to initialize the sampler (single attempt)
    */
   private async attemptInitialization(): Promise<void> {
+    debugLogger.info('AudioEngine: Starting single initialization attempt');
+    
     try {
-      // Handle audio context suspension
-      if (Tone.context.state === 'suspended') {
-        this._error = {
-          type: 'CONTEXT_SUSPENDED',
-          message: 'Audio context is suspended. User interaction required to resume audio.'
-        };
-        // Try to resume context
-        await Tone.start();
-      } else if (Tone.context.state !== 'running') {
-        await Tone.start();
+      // Check network connectivity first
+      const hasNetwork = await checkNetworkConnectivity();
+      if (!hasNetwork) {
+        debugLogger.error('AudioEngine: No network connectivity detected');
+        throw new Error('No network connection available for loading samples');
       }
 
-      // Define sample mapping for piano notes using Tone.js official samples
-      // Using the Salamander Grand Piano samples hosted on Tone.js CDN
-      // Optimized sample selection: fewer samples for faster loading
-      // Tone.js will automatically pitch-shift to cover all notes
-      const sampleMap: Record<string, string> = {
-        'A0': 'A0.mp3',
-        'C1': 'C1.mp3',
-        'D#1': 'Ds1.mp3',
-        'F#1': 'Fs1.mp3',
-        'A1': 'A1.mp3',
-        'C2': 'C2.mp3',
-        'D#2': 'Ds2.mp3',
-        'F#2': 'Fs2.mp3',
-        'A2': 'A2.mp3',
-        'C3': 'C3.mp3',
-        'D#3': 'Ds3.mp3',
-        'F#3': 'Fs3.mp3',
-        'A3': 'A3.mp3',
-        'C4': 'C4.mp3',
-        'D#4': 'Ds4.mp3',
-        'F#4': 'Fs4.mp3',
-        'A4': 'A4.mp3',
-        'C5': 'C5.mp3',
-        'D#5': 'Ds5.mp3',
-        'F#5': 'Fs5.mp3',
-        'A5': 'A5.mp3',
-        'C6': 'C6.mp3',
-        'D#6': 'Ds6.mp3',
-        'F#6': 'Fs6.mp3',
-        'A6': 'A6.mp3',
-        'C7': 'C7.mp3',
-        'D#7': 'Ds7.mp3',
-        'F#7': 'Fs7.mp3',
-        'A7': 'A7.mp3',
-        'C8': 'C8.mp3'
-      };
+      // Handle audio context suspension
+      if (Tone.context.state === 'suspended') {
+        debugLogger.warn('AudioEngine: Audio context suspended, will resume on first user interaction');
+        // Don't try to start the context here - it will fail without user gesture
+        // Just continue with sample loading, context will resume when user interacts
+      } else if (Tone.context.state !== 'running') {
+        debugLogger.info('AudioEngine: Starting audio context');
+        try {
+          await Tone.start();
+          debugLogger.info('AudioEngine: Audio context started successfully');
+        } catch (error) {
+          debugLogger.warn('AudioEngine: Could not start audio context, will resume on user interaction', { error });
+          // Continue anyway - samples can still load
+        }
+      }
+
+      // Find the best available sample source
+      const sampleSource = await findBestSampleSource();
       
       // Calculate total samples for progress tracking
-      const totalSamples = Object.keys(sampleMap).length;
+      const totalSamples = Object.keys(sampleSource.sampleMap).length;
+
+      debugLogger.info('AudioEngine: Creating sampler', { 
+        totalSamples,
+        sourceName: sampleSource.name,
+        baseUrl: sampleSource.baseUrl,
+        sampleKeys: Object.keys(sampleSource.sampleMap)
+      });
 
       // Clear any previous error
       this._error = null;
       this._loadingProgress = 10; // Indicate loading started
 
-      // Create sampler with error handling using Tone.js official piano samples
+      // Create sampler with error handling using selected sample source
       // Optimize for low-latency playback with attack and release settings
       let loadingError: Error | null = null;
       
       this.sampler = new Tone.Sampler({
-        urls: sampleMap,
-        baseUrl: 'https://tonejs.github.io/audio/salamander/',
+        urls: sampleSource.sampleMap,
+        baseUrl: sampleSource.baseUrl,
         attack: 0, // Immediate attack for low latency
         release: 1, // Natural release time
         onload: () => {
+          debugLogger.info('AudioEngine: All samples loaded successfully', { 
+            totalSamples,
+            sourceName: sampleSource.name
+          });
           this._isLoaded = true;
           this._loadingProgress = 100;
-          console.log(`Piano samples loaded successfully (${totalSamples} samples)`);
         },
         onerror: (error) => {
-          loadingError = new Error(`Sample loading failed: ${error}`);
-          console.error('Failed to load piano samples:', error);
+          debugLogger.error('AudioEngine: Sample loading error', { error, sourceName: sampleSource.name });
+          loadingError = new Error(`Sample loading failed from ${sampleSource.name}: ${error}`);
         }
       }).toDestination();
+
+      debugLogger.info('AudioEngine: Sampler created, waiting for samples to load');
 
       // Update progress as samples load
       this._loadingProgress = 20; // Indicate sampler created, loading in progress
@@ -212,6 +247,7 @@ export class AudioEngine {
         } else if (this._loadingProgress < 90) {
           // Gradually increase progress while loading
           this._loadingProgress += 5;
+          debugLogger.debug('AudioEngine: Loading progress', { progress: this._loadingProgress });
         }
       }, 200);
       
@@ -219,30 +255,47 @@ export class AudioEngine {
       try {
         await new Promise<void>((resolve, reject) => {
           const startTime = Date.now();
-          const timeout = 30000; // 30 seconds
+          const timeout = sampleSource.timeout;
+          
+          debugLogger.info('AudioEngine: Starting sample loading wait', { timeout, sourceName: sampleSource.name });
           
           const checkLoaded = () => {
+            const elapsed = Date.now() - startTime;
+            
             if (loadingError) {
+              debugLogger.error('AudioEngine: Loading error detected', { loadingError, elapsed, sourceName: sampleSource.name });
               clearInterval(progressInterval);
               reject(loadingError);
               return;
             }
             
             if (this._isLoaded) {
+              debugLogger.info('AudioEngine: Loading completed successfully', { elapsed, sourceName: sampleSource.name });
               clearInterval(progressInterval);
               resolve();
               return;
             }
             
             // Check for timeout
-            if (Date.now() - startTime > timeout) {
+            if (elapsed > timeout) {
+              debugLogger.error('AudioEngine: Loading timeout reached', { elapsed, timeout, sourceName: sampleSource.name });
               clearInterval(progressInterval);
               this._error = {
                 type: 'SAMPLE_LOADING_TIMEOUT',
-                message: 'Sample loading timed out after 30 seconds'
+                message: `Sample loading timed out after ${Math.round(timeout/1000)} seconds from ${sampleSource.name}`
               };
               reject(new Error(this._error.message));
               return;
+            }
+            
+            // Log periodic status updates
+            if (elapsed % 5000 === 0 && elapsed > 0) {
+              debugLogger.info('AudioEngine: Still loading samples', { 
+                elapsed,
+                progress: this._loadingProgress,
+                contextState: Tone.context.state,
+                sourceName: sampleSource.name
+              });
             }
             
             // Check again in 100ms
@@ -256,8 +309,10 @@ export class AudioEngine {
         clearInterval(progressInterval);
       }
 
+      debugLogger.info('AudioEngine: Initialization attempt completed successfully');
+
     } catch (error) {
-      console.error('AudioEngine initialization attempt failed:', error);
+      debugLogger.error('AudioEngine: Initialization attempt failed', { error });
       
       // Clean up on failure
       if (this.sampler) {
@@ -281,53 +336,33 @@ export class AudioEngine {
     }
 
     try {
-      // Handle suspended audio context
+      // Handle suspended audio context - try to resume on user interaction
       if (Tone.context.state === 'suspended') {
-        this._error = {
-          type: 'CONTEXT_SUSPENDED',
-          message: 'Audio context is suspended. User interaction required to resume audio.'
-        };
-        console.warn('Audio context suspended, attempting to resume...');
+        debugLogger.info('AudioEngine: Resuming audio context on user interaction');
         Tone.start().then(() => {
-          // Retry playing the note after context resumes
-          this.playNote(note, velocity);
+          debugLogger.info('AudioEngine: Audio context resumed, playing note');
+          this.playNoteInternal(note, velocity);
         }).catch((error) => {
-          console.error('Failed to resume audio context:', error);
+          debugLogger.error('AudioEngine: Failed to resume audio context', { error });
+          this._error = {
+            type: 'CONTEXT_SUSPENDED',
+            message: 'Audio context could not be resumed. Try clicking on the page first.'
+          };
         });
         return;
       }
 
       // Ensure audio context is running
       if (Tone.context.state !== 'running') {
-        Tone.start();
-      }
-
-      // Validate note parameter
-      if (!note || typeof note !== 'string') {
-        throw new Error(`Invalid note parameter: ${note}`);
-      }
-
-      // Validate velocity parameter
-      if (velocity < 0 || velocity > 1) {
-        console.warn(`Invalid velocity ${velocity}, clamping to 0-1 range`);
-        velocity = Math.max(0, Math.min(1, velocity));
-      }
-
-      // If note is already playing, don't retrigger it (prevents volume stacking)
-      if (this.activeNotes.has(note)) {
+        Tone.start().then(() => {
+          this.playNoteInternal(note, velocity);
+        }).catch((error) => {
+          debugLogger.error('AudioEngine: Failed to start audio context', { error });
+        });
         return;
       }
 
-      // Play the note with specified velocity
-      this.sampler.triggerAttack(note, undefined, velocity);
-      
-      // Track that this note is now active
-      this.activeNotes.add(note);
-      
-      // Clear any previous playback errors
-      if (this._error?.type === 'PLAYBACK_ERROR') {
-        this._error = null;
-      }
+      this.playNoteInternal(note, velocity);
       
     } catch (error) {
       this._error = {
@@ -335,8 +370,44 @@ export class AudioEngine {
         message: `Failed to play note ${note}`,
         originalError: error instanceof Error ? error : new Error(String(error))
       };
-      console.error('Failed to play note:', note, error);
+      debugLogger.error('AudioEngine: Failed to play note', { note, error });
     }
+  }
+
+  /**
+   * Internal method to actually play the note
+   */
+  private playNoteInternal(note: string, velocity: number): void {
+    if (!this.sampler) return;
+
+    // Validate note parameter
+    if (!note || typeof note !== 'string') {
+      throw new Error(`Invalid note parameter: ${note}`);
+    }
+
+    // Validate velocity parameter
+    if (velocity < 0 || velocity > 1) {
+      console.warn(`Invalid velocity ${velocity}, clamping to 0-1 range`);
+      velocity = Math.max(0, Math.min(1, velocity));
+    }
+
+    // If note is already playing, don't retrigger it (prevents volume stacking)
+    if (this.activeNotes.has(note)) {
+      return;
+    }
+
+    // Play the note with specified velocity
+    this.sampler.triggerAttack(note, undefined, velocity);
+    
+    // Track that this note is now active
+    this.activeNotes.add(note);
+    
+    // Clear any previous playback errors
+    if (this._error?.type === 'PLAYBACK_ERROR') {
+      this._error = null;
+    }
+
+    debugLogger.debug('AudioEngine: Note played successfully', { note, velocity });
   }
 
   /**
@@ -402,9 +473,10 @@ export class AudioEngine {
 
   /**
    * Check if the audio context is ready for playback
+   * Note: Audio context may be suspended until user interaction, but samples can still be loaded
    */
   get isReady(): boolean {
-    return this._isInitialized && this._isLoaded && !this.hasError && Tone.context.state === 'running';
+    return this._isInitialized && this._isLoaded && !this.hasError;
   }
 
   /**

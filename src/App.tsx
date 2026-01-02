@@ -2,10 +2,15 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Container from '@mui/material/Container';
-import { PianoKeyboard, LoadingIndicator, ErrorBoundary } from './components';
+import { Fab, Tooltip, Box, Typography } from '@mui/material';
+import { BugReport as BugIcon } from '@mui/icons-material';
+import { PianoKeyboard, LoadingIndicator, ErrorBoundary, DebugPanel } from './components';
 import { AudioEngine } from './utils/AudioEngine';
 import { useKeyboardInput, useLoadingWithRetry } from './hooks';
 import { initializeKeyboardMapping } from './utils/keyboardLayout';
+import { debugLogger } from './utils/debugLogger';
+import { debugConfig } from './config/debugConfig';
+import './utils/performanceMonitor'; // Initialize performance monitoring
 
 const theme = createTheme({
   palette: {
@@ -24,10 +29,46 @@ const theme = createTheme({
 
 function App() {
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
+  const [debugPanelOpen, setDebugPanelOpen] = useState(false);
   const audioEngineRef = useRef<AudioEngine | null>(null);
+
+  // Initialize debug logging
+  useEffect(() => {
+    debugLogger.info('App: Starting application');
+    debugLogger.info('App: Environment info', {
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      language: navigator.language,
+      online: navigator.onLine,
+      connection: (navigator as any).connection?.effectiveType || 'unknown'
+    });
+
+    debugLogger.info('App: Debug configuration', debugConfig);
+
+    // Auto-open debug panel if configured
+    if (debugConfig.autoOpen) {
+      setDebugPanelOpen(true);
+      debugLogger.info('App: Auto-opening debug panel');
+    }
+
+    // Add keyboard shortcut for debug panel (Ctrl/Cmd + D) if enabled
+    if (debugConfig.showKeyboardShortcut) {
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if ((event.ctrlKey || event.metaKey) && event.key === 'd') {
+          event.preventDefault();
+          setDebugPanelOpen(true);
+          debugLogger.info('App: Debug panel opened via keyboard shortcut');
+        }
+      };
+
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, []);
 
   // Create loading function for the retry hook
   const initializeAudio = useCallback(async () => {
+    debugLogger.info('App: Starting audio initialization');
     const audioEngine = new AudioEngine();
     audioEngineRef.current = audioEngine;
     
@@ -36,8 +77,13 @@ function App() {
     
     // Check for errors after initialization
     if (audioEngine.hasError) {
+      debugLogger.error('App: Audio engine has error after initialization', {
+        error: audioEngine.getErrorMessage()
+      });
       throw new Error(audioEngine.getErrorMessage());
     }
+    
+    debugLogger.info('App: Audio initialization completed successfully');
   }, []);
 
   // Use loading with retry hook for comprehensive error handling
@@ -49,13 +95,13 @@ function App() {
       exponentialBackoff: true,
     },
     onRetryAttempt: (attempt, maxRetries) => {
-      console.log(`Retry attempt ${attempt}/${maxRetries}`);
+      debugLogger.warn('App: Retry attempt', { attempt, maxRetries });
     },
     onTimeout: () => {
-      console.error('Audio loading timed out');
+      debugLogger.error('App: Audio loading timed out');
     },
     onMaxRetriesReached: () => {
-      console.error('Max retries reached for audio loading');
+      debugLogger.error('App: Max retries reached for audio loading');
     },
   });
 
@@ -63,12 +109,14 @@ function App() {
   useEffect(() => {
     const attemptLoad = async () => {
       try {
+        debugLogger.info('App: Starting initialization sequence');
         // Initialize keyboard mapping first
         await initializeKeyboardMapping();
+        debugLogger.info('App: Keyboard mapping initialized');
         // Then initialize audio engine
         await loadingState.retry();
       } catch (error) {
-        console.error('Failed to initialize:', error);
+        debugLogger.error('App: Failed to initialize', { error });
       }
     };
 
@@ -76,6 +124,7 @@ function App() {
 
     // Cleanup on unmount
     return () => {
+      debugLogger.info('App: Cleaning up on unmount');
       if (audioEngineRef.current) {
         audioEngineRef.current.dispose();
       }
@@ -102,6 +151,14 @@ function App() {
     }
   };
 
+  // Handle first user interaction to resume audio context
+  const handleFirstInteraction = useCallback(() => {
+    if (audioEngineRef.current && loadingState.isLoaded) {
+      debugLogger.info('App: First user interaction detected, ensuring audio context is ready');
+      // The playNote method will handle resuming the context if needed
+    }
+  }, [loadingState.isLoaded]);
+
   // Set up keyboard input handling
   useKeyboardInput({
     onKeyPress: handleKeyPress,
@@ -115,6 +172,7 @@ function App() {
       <Container 
         maxWidth={false} 
         disableGutters
+        onClick={handleFirstInteraction}
         sx={{
           height: '100vh',
           width: '100vw', // Use full viewport width
@@ -143,16 +201,70 @@ function App() {
             variant="linear"
           />
         )}
+
+        {/* Show audio context suspended message */}
+        {loadingState.isLoaded && !loadingState.hasError && audioEngineRef.current?.error?.type === 'CONTEXT_SUSPENDED' && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              textAlign: 'center',
+              bgcolor: 'background.paper',
+              p: 3,
+              borderRadius: 2,
+              boxShadow: 3
+            }}
+          >
+            <Typography variant="h6" gutterBottom>
+              Audio Ready
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Click anywhere to enable sound
+            </Typography>
+          </Box>
+        )}
         
         {/* Show piano keyboard when loaded and no error */}
         {loadingState.isLoaded && !loadingState.hasError && (
           <ErrorBoundary>
             <PianoKeyboard
-              onKeyPress={handleKeyPress}
+              onKeyPress={(note) => {
+                handleFirstInteraction();
+                handleKeyPress(note);
+              }}
               onKeyRelease={handleKeyRelease}
               pressedKeys={pressedKeys}
             />
           </ErrorBoundary>
+        )}
+
+        {/* Debug Panel FAB - only show if enabled in config */}
+        {debugConfig.enabled && debugConfig.showFab && (
+          <Fab
+            color="secondary"
+            size="small"
+            onClick={() => setDebugPanelOpen(true)}
+            sx={{
+              position: 'fixed',
+              bottom: 16,
+              right: 16,
+              zIndex: 1000
+            }}
+          >
+            <Tooltip title="Open Debug Panel">
+              <BugIcon />
+            </Tooltip>
+          </Fab>
+        )}
+
+        {/* Debug Panel - only render if enabled */}
+        {debugConfig.enabled && (
+          <DebugPanel
+            open={debugPanelOpen}
+            onClose={() => setDebugPanelOpen(false)}
+          />
         )}
       </Container>
     </ThemeProvider>
