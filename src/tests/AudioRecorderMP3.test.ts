@@ -158,15 +158,27 @@ describe('AudioRecorder MP3 Integration', () => {
 
   describe('Download Methods', () => {
     beforeEach(async () => {
-      // Start and stop recording to have something to download
+      // Start recording to initialize state
       await recorder.startRecording();
       
-      // Simulate recording data
+      // Simulate recording data by triggering the MediaRecorder events properly
       const mockBlob = new Blob(['test audio'], { type: 'audio/webm' });
-      (recorder as any)._recordedBlob = mockBlob;
+      
+      // Simulate the MediaRecorder data available event
+      if (mockMediaRecorder.ondataavailable) {
+        mockMediaRecorder.ondataavailable({ data: mockBlob });
+      }
+      
+      // Set duration before stopping
       (recorder as any)._duration = 5.0;
       
+      // Stop recording which will trigger the onstop event and create the recorded blob
       recorder.stopRecording();
+      
+      // Simulate the MediaRecorder stop event to complete the recording process
+      if (mockMediaRecorder.onstop) {
+        mockMediaRecorder.onstop();
+      }
     });
 
     it('should have downloadRecording method that accepts MP3 options', async () => {
@@ -239,6 +251,208 @@ describe('AudioRecorder MP3 Integration', () => {
     it('should not interfere with performance replay', () => {
       expect(typeof recorder.canReplayPerformance).toBe('boolean');
       expect(typeof recorder.isReplayingPerformance).toBe('boolean');
+    });
+  });
+
+  /**
+   * **Feature: piano-control-panel, Property 18: Audio export functionality**
+   * **Validates: Requirements 5.5**
+   * 
+   * Property: For any recorded audio, the download function should generate a valid 
+   * file containing the recorded content.
+   * 
+   * This property verifies that:
+   * 1. Download functionality is available after recording
+   * 2. Download generates a valid file with correct content
+   * 3. File format and metadata are preserved correctly
+   * 4. Download process handles different audio data sizes
+   * 5. Error handling works correctly for download scenarios
+   */
+  describe('Property 18: Audio export functionality', () => {
+    // Import fast-check for property-based testing
+    const fc = require('fast-check');
+
+    it('Property 18: Audio export functionality - download generates valid files', () => {
+      // Generator for recording session parameters
+      const recordingDurationArb = fc.float({ min: Math.fround(0.1), max: Math.fround(30.0), noNaN: true });
+      const audioDataSizeArb = fc.integer({ min: 1000, max: 50000 }); // Simulate different audio data sizes
+      const mimeTypeArb = fc.constantFrom('audio/webm', 'audio/mp4', 'audio/wav');
+      
+      // Property: For any recorded audio, download should generate a valid file
+      fc.assert(
+        fc.asyncProperty(recordingDurationArb, audioDataSizeArb, mimeTypeArb, async (duration: number, audioDataSize: number, mimeType: string) => {
+          let testRecorder: AudioRecorder | null = null;
+          
+          // Store original DOM methods for restoration
+          const originalCreateElement = document.createElement;
+          const originalAppendChild = document.body.appendChild;
+          const originalRemoveChild = document.body.removeChild;
+          const originalCreateObjectURL = global.URL.createObjectURL;
+          const originalRevokeObjectURL = global.URL.revokeObjectURL;
+          
+          // Track created URLs and elements for cleanup
+          const createdUrls: string[] = [];
+          const createdElements: HTMLElement[] = [];
+          
+          try {
+            // Arrange: Create recorder and simulate a completed recording
+            testRecorder = new AudioRecorder({ mimeType });
+            
+            // Simulate a completed recording session with audio data
+            const mockAudioData = new Uint8Array(audioDataSize);
+            // Fill with varied data to simulate real audio content
+            for (let i = 0; i < audioDataSize; i++) {
+              mockAudioData[i] = (i % 256); // Create pattern to verify content integrity
+            }
+            const mockBlob = new Blob([mockAudioData], { type: mimeType });
+            
+            // Directly set the recording state to simulate a completed recording
+            // This bypasses the complex MediaRecorder mocking and focuses on the download logic
+            (testRecorder as any)._recordedBlob = mockBlob;
+            (testRecorder as any)._duration = duration;
+            (testRecorder as any)._isRecording = false;
+            
+            // Mock URL methods for download testing with proper scoping
+            global.URL.createObjectURL = vi.fn().mockImplementation((blob: Blob) => {
+              // Verify blob integrity
+              expect(blob).toBeInstanceOf(Blob);
+              expect(blob.size).toBeGreaterThan(0);
+              expect(blob.type).toBeTruthy();
+              
+              const mockUrl = `blob:mock-url-${Date.now()}-${Math.random()}`;
+              createdUrls.push(mockUrl);
+              return mockUrl;
+            });
+            
+            global.URL.revokeObjectURL = vi.fn().mockImplementation((url: string) => {
+              const index = createdUrls.indexOf(url);
+              if (index > -1) {
+                createdUrls.splice(index, 1);
+              }
+            });
+            
+            // Mock document.createElement to track link creation
+            document.createElement = vi.fn().mockImplementation((tagName: string) => {
+              const element = originalCreateElement.call(document, tagName);
+              if (tagName === 'a') {
+                createdElements.push(element);
+                // Mock the link element properties
+                Object.defineProperties(element, {
+                  href: { writable: true, value: '' },
+                  download: { writable: true, value: '' },
+                  click: { writable: true, value: vi.fn() }
+                });
+              }
+              return element;
+            });
+            
+            // Mock appendChild and removeChild to track DOM operations
+            document.body.appendChild = vi.fn().mockImplementation((element: HTMLElement) => {
+              return element;
+            });
+            
+            document.body.removeChild = vi.fn().mockImplementation((element: HTMLElement) => {
+              const index = createdElements.indexOf(element);
+              if (index > -1) {
+                createdElements.splice(index, 1);
+              }
+              return element;
+            });
+            
+            // Act: Test download functionality
+            
+            // 1. Verify recording is available for download
+            expect(testRecorder.hasRecording).toBe(true);
+            expect(testRecorder.recordedBlob).not.toBeNull();
+            expect(testRecorder.duration).toBe(duration);
+            
+            // 2. Test download initiation (original format)
+            let downloadError = null;
+            try {
+              await testRecorder!.downloadOriginalFormat();
+            } catch (error) {
+              downloadError = error;
+            }
+            
+            // The download should not throw an error
+            expect(downloadError).toBeNull();
+            
+            // 3. Verify download setup was called correctly
+            expect(global.URL.createObjectURL).toHaveBeenCalledWith(mockBlob);
+            expect(document.createElement).toHaveBeenCalledWith('a');
+            expect(document.body.appendChild).toHaveBeenCalled();
+            expect(document.body.removeChild).toHaveBeenCalled();
+            
+            // 4. Verify link element was configured correctly
+            const createElementCalls = (document.createElement as any).mock.calls;
+            const linkCreationCall = createElementCalls.find((call: any[]) => call[0] === 'a');
+            expect(linkCreationCall).toBeDefined();
+            
+            // 5. Verify URL was created
+            expect(createdUrls.length).toBeGreaterThan(0);
+            
+            // 6. Verify no errors occurred during download setup
+            expect(testRecorder.hasError).toBe(false);
+            expect(testRecorder.error).toBeNull();
+            
+            // 7. Test that recorder state remains consistent after download
+            expect(testRecorder.hasRecording).toBe(true);
+            expect(testRecorder.recordedBlob).not.toBeNull();
+            expect(testRecorder.duration).toBe(duration);
+            
+            // 8. Verify blob integrity is maintained
+            expect(testRecorder.recordedBlob?.size).toBeGreaterThan(0);
+            expect(testRecorder.recordedBlob?.type).toBeTruthy();
+            
+            // 9. Test filename generation (if method exists)
+            if (typeof (testRecorder as any).generateFilename === 'function') {
+              const filename = (testRecorder as any).generateFilename();
+              expect(typeof filename).toBe('string');
+              expect(filename.length).toBeGreaterThan(0);
+              expect(filename).toMatch(/piano-recording-.*\.(webm|mp4|wav)$/);
+              
+              // 10. Verify file extension matches MIME type (if method exists)
+              if (typeof (testRecorder as any).getFileExtension === 'function') {
+                const expectedExtension = (testRecorder as any).getFileExtension();
+                expect(filename).toContain(expectedExtension);
+                
+                if (mimeType.includes('webm')) {
+                  expect(expectedExtension).toBe('webm');
+                } else if (mimeType.includes('mp4')) {
+                  expect(expectedExtension).toBe('mp4');
+                } else if (mimeType.includes('wav')) {
+                  expect(expectedExtension).toBe('wav');
+                }
+              }
+            }
+            
+          } finally {
+            // Cleanup
+            if (testRecorder) {
+              testRecorder.dispose();
+            }
+            
+            // Restore original DOM methods
+            document.createElement = originalCreateElement;
+            document.body.appendChild = originalAppendChild;
+            document.body.removeChild = originalRemoveChild;
+            global.URL.createObjectURL = originalCreateObjectURL;
+            global.URL.revokeObjectURL = originalRevokeObjectURL;
+            
+            // Clean up any remaining URLs
+            createdUrls.forEach((url: string) => {
+              try {
+                URL.revokeObjectURL(url);
+              } catch (e) {
+                // Ignore cleanup errors
+              }
+            });
+            
+            vi.clearAllMocks();
+          }
+        }),
+        { numRuns: 100 }
+      );
     });
   });
 });

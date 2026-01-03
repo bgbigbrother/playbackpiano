@@ -52,6 +52,7 @@ vi.mock('tone', () => ({
       bpm: { value: 120 },
       scheduleRepeat: vi.fn(),
       cancel: vi.fn(),
+      clear: vi.fn(),
     },
     Sampler: vi.fn().mockImplementation(createMockSampler),
     Oscillator: vi.fn().mockImplementation(() => ({
@@ -65,6 +66,16 @@ vi.mock('tone', () => ({
       connect: vi.fn().mockReturnThis(),
       dispose: vi.fn(),
       gain: { value: 1 },
+    })),
+    AmplitudeEnvelope: vi.fn().mockImplementation(() => ({
+      connect: vi.fn().mockReturnThis(),
+      toDestination: vi.fn().mockReturnThis(),
+      dispose: vi.fn(),
+      triggerAttackRelease: vi.fn(),
+      attack: 0.001,
+      decay: 0.1,
+      sustain: 0,
+      release: 0.1,
     })),
   },
   // Remove duplicate definitions - use the default export
@@ -85,6 +96,7 @@ vi.mock('tone', () => ({
     bpm: { value: 120 },
     scheduleRepeat: vi.fn(),
     cancel: vi.fn(),
+    clear: vi.fn(),
   },
   Sampler: vi.fn().mockImplementation(createMockSampler),
   Oscillator: vi.fn().mockImplementation(() => ({
@@ -98,6 +110,16 @@ vi.mock('tone', () => ({
     connect: vi.fn().mockReturnThis(),
     dispose: vi.fn(),
     gain: { value: 1 },
+  })),
+  AmplitudeEnvelope: vi.fn().mockImplementation(() => ({
+    connect: vi.fn().mockReturnThis(),
+    toDestination: vi.fn().mockReturnThis(),
+    dispose: vi.fn(),
+    triggerAttackRelease: vi.fn(),
+    attack: 0.001,
+    decay: 0.1,
+    sustain: 0,
+    release: 0.1,
   })),
 }));
 

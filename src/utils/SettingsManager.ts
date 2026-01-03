@@ -181,7 +181,7 @@ export class SettingsManager {
    * Validate settings object structure
    */
   private isValidSettings(obj: any): obj is UserSettings {
-    if (!obj || typeof obj !== 'object') {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
       return false;
     }
 
@@ -195,6 +195,13 @@ export class SettingsManager {
       'noteLogMaxEntries',
       'audioRecordingFormat'
     ];
+
+    // Check for extra properties that shouldn't be there (potential corruption/injection)
+    const objKeys = Object.keys(obj);
+    const hasExtraProperties = objKeys.some(key => !requiredKeys.includes(key as keyof UserSettings));
+    if (hasExtraProperties) {
+      return false; // Reject objects with extra properties as potentially corrupted
+    }
 
     // Check if all required keys exist and have correct types
     for (const key of requiredKeys) {

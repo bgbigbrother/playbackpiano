@@ -41,7 +41,7 @@ export class MetronomeEngine {
   /**
    * Initialize the metronome with Tone.js Transport and click sound
    */
-  private async initializeMetronome(): Promise<void> {
+  private initializeMetronome(): void {
     try {
       debugLogger.info('MetronomeEngine: Initializing metronome');
 

@@ -766,8 +766,8 @@ export class AudioRecorder {
       
       debugLogger.info('AudioRecorder: Original format download completed', { 
         filename,
-        size: this._recordedBlob.size,
-        type: this._recordedBlob.type
+        size: this._recordedBlob?.size || 0,
+        type: this._recordedBlob?.type || 'unknown'
       });
 
     } catch (error) {
