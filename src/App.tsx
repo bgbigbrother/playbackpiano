@@ -4,9 +4,9 @@ import CssBaseline from '@mui/material/CssBaseline';
 import Container from '@mui/material/Container';
 import { Fab, Tooltip, Box, Typography } from '@mui/material';
 import { BugReport as BugIcon } from '@mui/icons-material';
-import { PianoKeyboard, LoadingIndicator, ErrorBoundary, DebugPanel } from './components';
-import { AudioEngine } from './utils/AudioEngine';
-import { useKeyboardInput, useLoadingWithRetry } from './hooks';
+import { PianoKeyboard, LoadingIndicator, ErrorBoundary, DebugPanel, ControlPanel, PanelToggle } from './components';
+import { AudioEngine } from './utils';
+import { useKeyboardInput, useLoadingWithRetry, useControlPanel } from './hooks';
 import { initializeKeyboardMapping } from './utils/keyboardLayout';
 import { debugLogger } from './utils/debugLogger';
 import { debugConfig } from './config/debugConfig';
@@ -31,6 +31,12 @@ function App() {
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
   const [debugPanelOpen, setDebugPanelOpen] = useState(false);
   const audioEngineRef = useRef<AudioEngine | null>(null);
+
+  // Initialize control panel state
+  const controlPanelState = useControlPanel();
+  
+  // Destructure for better dependency tracking
+  const { keyMarkingEnabledRef, markedKeys, toggleMarkedKey } = controlPanelState;
 
   // Initialize debug logging
   useEffect(() => {
@@ -83,6 +89,8 @@ function App() {
       throw new Error(audioEngine.getErrorMessage());
     }
     
+    // Initialize key marking manager after audio engine is ready
+    // Note: Key marking is now handled directly through React state
     debugLogger.info('App: Audio initialization completed successfully');
   }, []);
 
@@ -128,21 +136,32 @@ function App() {
       if (audioEngineRef.current) {
         audioEngineRef.current.dispose();
       }
+      // Note: KeyMarkingManager no longer used - key marking handled by React state
     };
   }, []);
 
   // Handle key press events (both mouse and keyboard)
-  const handleKeyPress = (note: string) => {
+  const handleKeyPress = useCallback((note: string) => {
     if (audioEngineRef.current && audioEngineRef.current.isReady) {
+      // Always play the note for immediate audio feedback
       audioEngineRef.current.playNote(note);
+      
+      // Check if key marking mode is enabled using the ref for synchronous access
+      if (keyMarkingEnabledRef.current) {
+        // In marking mode, also toggle the key in React state
+        toggleMarkedKey(note);
+      }
+      
       setPressedKeys(prev => new Set([...prev, note]));
     }
-  };
+  }, [keyMarkingEnabledRef, toggleMarkedKey]);
 
   // Handle key release events (both mouse and keyboard)
   const handleKeyRelease = (note: string) => {
     if (audioEngineRef.current) {
+      // Always release the note to ensure it can be played again
       audioEngineRef.current.releaseNote(note);
+      
       setPressedKeys(prev => {
         const newSet = new Set(prev);
         newSet.delete(note);
@@ -158,6 +177,27 @@ function App() {
       // The playNote method will handle resuming the context if needed
     }
   }, [loadingState.isLoaded]);
+
+  // Handle playing all marked keys simultaneously
+  const handlePlayMarkedKeys = useCallback(() => {
+    if (audioEngineRef.current && audioEngineRef.current.isReady && markedKeys.size > 0) {
+      // Play all marked keys simultaneously with default velocity
+      const velocity = 0.8;
+      markedKeys.forEach(note => {
+        try {
+          audioEngineRef.current!.playNote(note, velocity);
+          // Release the note after a short duration to allow replaying
+          setTimeout(() => {
+            if (audioEngineRef.current) {
+              audioEngineRef.current.releaseNote(note);
+            }
+          }, 100); // Release after 100ms to allow immediate replaying
+        } catch (error) {
+          console.error('Failed to play marked key:', note, error);
+        }
+      });
+    }
+  }, [markedKeys]);
 
   // Set up keyboard input handling
   useKeyboardInput({
@@ -181,6 +221,11 @@ function App() {
           justifyContent: 'flex-end',
           overflow: 'hidden', // Prevent scrolling
           position: 'relative',
+          // Adjust for control panel when open
+          marginRight: controlPanelState.isOpen ? { xs: 0, md: '320px' } : 0,
+          transition: theme.transitions.create(['margin'], {
+            duration: theme.transitions.duration.leavingScreen,
+          }),
           // Mobile-specific optimizations
           touchAction: 'manipulation', // Optimize for touch devices
           userSelect: 'none', // Prevent text selection on mobile
@@ -236,9 +281,25 @@ function App() {
               }}
               onKeyRelease={handleKeyRelease}
               pressedKeys={pressedKeys}
+              markedKeys={markedKeys}
+              labelsVisible={controlPanelState.labelsVisible}
             />
           </ErrorBoundary>
         )}
+
+        {/* Control Panel Toggle Button */}
+        {loadingState.isLoaded && !loadingState.hasError && (
+          <PanelToggle
+            onClick={controlPanelState.togglePanel}
+            isOpen={controlPanelState.isOpen}
+          />
+        )}
+
+        {/* Control Panel */}
+        <ControlPanel 
+          controlPanelState={controlPanelState} 
+          onPlayMarkedKeys={handlePlayMarkedKeys}
+        />
 
         {/* Debug Panel FAB - only show if enabled in config */}
         {debugConfig.enabled && debugConfig.showFab && (

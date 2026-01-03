@@ -333,7 +333,7 @@ describe('Loading State Transitions', () => {
         const mockLoadingFn = vi.fn().mockImplementation(
           () =>
             new Promise((resolve) => {
-              setTimeout(resolve, 60000); // 60 seconds
+              setTimeout(resolve, 5000); // Reduced from 60 seconds to 5 seconds
             })
         );
 

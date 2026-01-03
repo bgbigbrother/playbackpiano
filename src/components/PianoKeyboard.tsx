@@ -7,6 +7,8 @@ export interface PianoKeyboardProps {
   onKeyPress?: (note: string) => void;
   onKeyRelease?: (note: string) => void;
   pressedKeys?: Set<string>;
+  markedKeys?: Set<string>;
+  labelsVisible?: boolean;
 }
 
 // Styled container for the piano keyboard
@@ -47,7 +49,9 @@ const BlackKeysContainer = styled(Box)({
 export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
   onKeyPress,
   onKeyRelease,
-  pressedKeys = new Set()
+  pressedKeys = new Set(),
+  markedKeys = new Set(),
+  labelsVisible = true
 }) => {
   const [localPressedKeys, setLocalPressedKeys] = useState<Set<string>>(new Set());
   
@@ -80,7 +84,9 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
             key={key.note}
             note={key.note}
             isPressed={allPressedKeys.has(key.note)}
+            isMarked={markedKeys.has(key.note)}
             isBlack={false}
+            labelsVisible={labelsVisible}
             width={`${layout.whiteKeyWidth}%`}
             onPress={handleKeyPress}
             onRelease={handleKeyRelease}
@@ -95,7 +101,9 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
             key={key.note}
             note={key.note}
             isPressed={allPressedKeys.has(key.note)}
+            isMarked={markedKeys.has(key.note)}
             isBlack={true}
+            labelsVisible={labelsVisible}
             width={`${layout.blackKeyWidth}%`}
             onPress={handleKeyPress}
             onRelease={handleKeyRelease}

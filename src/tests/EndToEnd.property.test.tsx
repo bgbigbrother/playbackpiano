@@ -56,7 +56,7 @@ describe('End-to-End Property-Based Tests', () => {
           expect(failedText).toBeInTheDocument();
         }
       },
-      { timeout: 15000 }
+      { timeout: 8000 }
     );
 
     // Verify state consistency: never both loaded and error simultaneously

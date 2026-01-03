@@ -2,6 +2,32 @@ import { describe, it, expect, beforeEach, afterEach, vi, beforeAll } from 'vite
 import { AudioEngine } from '../utils/AudioEngine';
 import * as fc from 'fast-check';
 
+// Mock Tone.js completely for testing
+vi.mock('tone', () => ({
+  context: {
+    rawContext: {
+      latencyHint: 'interactive',
+      sampleRate: 44100,
+      state: 'running'
+    },
+    state: 'running',
+    sampleRate: 44100,
+    latencyHint: 'interactive'
+  },
+  Sampler: vi.fn().mockImplementation(() => ({
+    triggerAttack: vi.fn(),
+    triggerRelease: vi.fn(),
+    dispose: vi.fn(),
+    loaded: true
+  })),
+  start: vi.fn(),
+  Transport: {
+    start: vi.fn(),
+    stop: vi.fn(),
+    pause: vi.fn()
+  }
+}));
+
 /**
  * Property-Based Tests for Concurrent Input Handling
  * Using fast-check to verify polyphonic audio playback
@@ -13,36 +39,37 @@ describe('Concurrent Input - Property-Based Tests', () => {
   // Mock Web Audio API for testing
   beforeAll(() => {
     // Mock AudioContext if not available
-    if (typeof window !== 'undefined' && !window.AudioContext) {
-      // @ts-expect-error - Mocking for test environment
-      window.AudioContext = class MockAudioContext {
-        state = 'running';
-        destination = {};
-        createGain() {
-          return {
-            connect: vi.fn(),
-            gain: { value: 1 }
-          };
-        }
-        createOscillator() {
-          return {
-            connect: vi.fn(),
-            start: vi.fn(),
-            stop: vi.fn(),
-            frequency: { value: 440 }
-          };
-        }
-      };
-    }
+    Object.defineProperty(window, 'AudioContext', {
+      writable: true,
+      value: vi.fn().mockImplementation(() => ({
+        createOscillator: vi.fn(),
+        createGain: vi.fn(),
+        destination: {},
+        currentTime: 0,
+        sampleRate: 44100,
+        state: 'running',
+        suspend: vi.fn(),
+        resume: vi.fn(),
+        close: vi.fn(),
+      })),
+    });
+
+    // Also mock webkitAudioContext for older browsers
+    Object.defineProperty(window, 'webkitAudioContext', {
+      writable: true,
+      value: window.AudioContext,
+    });
   });
 
   beforeEach(() => {
-    try {
-      audioEngine = new AudioEngine();
-    } catch (error) {
-      // Expected in test environment without Web Audio API
-      audioEngine = null;
-    }
+    // Create AudioEngine instance - should work with mocked Tone.js
+    audioEngine = new AudioEngine();
+    
+    // Simulate successful initialization and loading
+    // @ts-expect-error - Accessing private property for testing
+    audioEngine._isInitialized = true;
+    // @ts-expect-error - Accessing private property for testing
+    audioEngine._isLoaded = true;
   });
 
   afterEach(() => {
@@ -65,11 +92,8 @@ describe('Concurrent Input - Property-Based Tests', () => {
    * 4. Both mouse and keyboard inputs support polyphonic behavior
    */
   it('Property 3: Concurrent input produces concurrent audio - multiple simultaneous notes trigger concurrent playback', () => {
-    // Skip test if AudioEngine couldn't initialize (no Web Audio API in test env)
-    if (!audioEngine) {
-      console.log('Skipping property test: AudioEngine not available in test environment');
-      return;
-    }
+    // AudioEngine should be available with mocked Tone.js
+    expect(audioEngine).not.toBeNull();
 
     // Generator for valid piano notes
     const noteNameArb = fc.constantFrom('A', 'B', 'C', 'D', 'E', 'F', 'G');
@@ -93,9 +117,7 @@ describe('Concurrent Input - Property-Based Tests', () => {
         const mockTriggerAttack = vi.fn();
         const mockTriggerRelease = vi.fn();
         
-        // Simulate loaded state for testing
-        // @ts-expect-error - Accessing private property for testing
-        audioEngine._isLoaded = true;
+        // Mock the sampler for this test iteration
         // @ts-expect-error - Accessing private property for testing
         audioEngine.sampler = {
           triggerAttack: mockTriggerAttack,
@@ -136,10 +158,7 @@ describe('Concurrent Input - Property-Based Tests', () => {
    * Verifies that releasing individual notes from a chord works correctly
    */
   it('Property 3 (extended): Individual note release from concurrent playback', () => {
-    if (!audioEngine) {
-      console.log('Skipping property test: AudioEngine not available in test environment');
-      return;
-    }
+    expect(audioEngine).not.toBeNull();
 
     const noteArb = fc.constantFrom('C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4');
     const concurrentNotesArb = fc.uniqueArray(noteArb, { 
@@ -152,8 +171,7 @@ describe('Concurrent Input - Property-Based Tests', () => {
         const mockTriggerAttack = vi.fn();
         const mockTriggerRelease = vi.fn();
         
-        // @ts-expect-error - Accessing private property for testing
-        audioEngine._isLoaded = true;
+        // Mock the sampler for this test iteration
         // @ts-expect-error - Accessing private property for testing
         audioEngine.sampler = {
           triggerAttack: mockTriggerAttack,
@@ -195,10 +213,7 @@ describe('Concurrent Input - Property-Based Tests', () => {
    * Verifies that playing the same note multiple times doesn't stack audio
    */
   it('Property 3 (extended): Duplicate concurrent notes do not stack', () => {
-    if (!audioEngine) {
-      console.log('Skipping property test: AudioEngine not available in test environment');
-      return;
-    }
+    expect(audioEngine).not.toBeNull();
 
     const noteArb = fc.constantFrom('C4', 'D4', 'E4', 'F4', 'G4');
 
@@ -207,8 +222,7 @@ describe('Concurrent Input - Property-Based Tests', () => {
         const mockTriggerAttack = vi.fn();
         const mockTriggerRelease = vi.fn();
         
-        // @ts-expect-error - Accessing private property for testing
-        audioEngine._isLoaded = true;
+        // Mock the sampler for this test iteration
         // @ts-expect-error - Accessing private property for testing
         audioEngine.sampler = {
           triggerAttack: mockTriggerAttack,

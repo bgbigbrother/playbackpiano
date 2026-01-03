@@ -8,19 +8,27 @@
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "test": "vitest --run",
-    "test:watch": "vitest"
+    "test": "vitest --run --reporter=basic",
+    "test:watch": "vitest --reporter=basic",
+    "test:fast": "vitest --run --config=vitest.config.fast.ts",
+    "test:unit": "vitest --run --reporter=basic --testTimeout=5000 --hookTimeout=3000",
+    "test:verbose": "VERBOSE_TESTS=1 vitest --run --reporter=verbose"
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "@mui/material": "^5.15.15",
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.5",
     "@mui/icons-material": "^5.15.15",
+    "@mui/material": "^5.15.15",
+    "lamejs": "^1.2.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "tone": "^15.1.22"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.4.2",
+    "@testing-library/react": "^14.2.2",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/node": "^20.11.30",
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
     "@typescript-eslint/eslint-plugin": "^7.2.0",
@@ -29,14 +37,10 @@
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.6",
+    "fast-check": "^3.17.1",
+    "jsdom": "^24.0.0",
     "typescript": "^5.2.2",
     "vite": "^5.2.0",
-    "vitest": "^1.4.0",
-    "@testing-library/react": "^14.2.2",
-    "@testing-library/jest-dom": "^6.4.2",
-    "@testing-library/user-event": "^14.5.2",
-    "jsdom": "^24.0.0",
-    "fast-check": "^3.17.1",
-    "@types/node": "^20.11.30"
+    "vitest": "^1.4.0"
   }
 }

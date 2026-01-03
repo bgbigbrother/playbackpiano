@@ -2,6 +2,32 @@ import { describe, it, expect, beforeEach, afterEach, vi, beforeAll } from 'vite
 import { AudioEngine } from '../utils/AudioEngine';
 import * as fc from 'fast-check';
 
+// Mock Tone.js completely for testing
+vi.mock('tone', () => ({
+  context: {
+    rawContext: {
+      latencyHint: 'interactive',
+      sampleRate: 44100,
+      state: 'running'
+    },
+    state: 'running',
+    sampleRate: 44100,
+    latencyHint: 'interactive'
+  },
+  Sampler: vi.fn().mockImplementation(() => ({
+    triggerAttack: vi.fn(),
+    triggerRelease: vi.fn(),
+    dispose: vi.fn(),
+    loaded: true
+  })),
+  start: vi.fn(),
+  Transport: {
+    start: vi.fn(),
+    stop: vi.fn(),
+    pause: vi.fn()
+  }
+}));
+
 /**
  * Property-Based Tests for AudioEngine
  * Using fast-check to verify universal properties across all valid inputs
@@ -13,36 +39,37 @@ describe('AudioEngine - Property-Based Tests', () => {
   // Mock Web Audio API for testing
   beforeAll(() => {
     // Mock AudioContext if not available
-    if (typeof window !== 'undefined' && !window.AudioContext) {
-      // @ts-expect-error - Mocking for test environment
-      window.AudioContext = class MockAudioContext {
-        state = 'running';
-        destination = {};
-        createGain() {
-          return {
-            connect: vi.fn(),
-            gain: { value: 1 }
-          };
-        }
-        createOscillator() {
-          return {
-            connect: vi.fn(),
-            start: vi.fn(),
-            stop: vi.fn(),
-            frequency: { value: 440 }
-          };
-        }
-      };
-    }
+    Object.defineProperty(window, 'AudioContext', {
+      writable: true,
+      value: vi.fn().mockImplementation(() => ({
+        createOscillator: vi.fn(),
+        createGain: vi.fn(),
+        destination: {},
+        currentTime: 0,
+        sampleRate: 44100,
+        state: 'running',
+        suspend: vi.fn(),
+        resume: vi.fn(),
+        close: vi.fn(),
+      })),
+    });
+
+    // Also mock webkitAudioContext for older browsers
+    Object.defineProperty(window, 'webkitAudioContext', {
+      writable: true,
+      value: window.AudioContext,
+    });
   });
 
   beforeEach(() => {
-    try {
-      audioEngine = new AudioEngine();
-    } catch (error) {
-      // Expected in test environment without Web Audio API
-      audioEngine = null;
-    }
+    // Create AudioEngine instance - should work with mocked Tone.js
+    audioEngine = new AudioEngine();
+    
+    // Simulate successful initialization and loading
+    // @ts-expect-error - Accessing private property for testing
+    audioEngine._isInitialized = true;
+    // @ts-expect-error - Accessing private property for testing
+    audioEngine._isLoaded = true;
   });
 
   afterEach(() => {
@@ -65,11 +92,8 @@ describe('AudioEngine - Property-Based Tests', () => {
    * 3. The audio system is triggered for each valid input
    */
   it('Property 1: Input triggers corresponding audio - playNote accepts all valid notes without error', () => {
-    // Skip test if AudioEngine couldn't initialize (no Web Audio API in test env)
-    if (!audioEngine) {
-      console.log('Skipping property test: AudioEngine not available in test environment');
-      return;
-    }
+    // AudioEngine should be available with mocked Tone.js
+    expect(audioEngine).not.toBeNull();
 
     // Generator for valid piano notes
     // Piano notes consist of: note name (A-G), optional sharp (#), and octave (0-8)
@@ -88,9 +112,7 @@ describe('AudioEngine - Property-Based Tests', () => {
         const mockTriggerAttack = vi.fn();
         const mockTriggerRelease = vi.fn();
         
-        // Simulate loaded state for testing
-        // @ts-expect-error - Accessing private property for testing
-        audioEngine._isLoaded = true;
+        // Mock the sampler for this test iteration
         // @ts-expect-error - Accessing private property for testing
         audioEngine.sampler = {
           triggerAttack: mockTriggerAttack,
@@ -121,10 +143,7 @@ describe('AudioEngine - Property-Based Tests', () => {
    * Ensures that playNote handles velocity values correctly across the valid range
    */
   it('Property 1 (extended): Input with velocity triggers corresponding audio with correct volume', () => {
-    if (!audioEngine) {
-      console.log('Skipping property test: AudioEngine not available in test environment');
-      return;
-    }
+    expect(audioEngine).not.toBeNull();
 
     const noteArb = fc.constantFrom('C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4');
     const velocityArb = fc.double({ min: 0, max: 1, noNaN: true });
@@ -135,8 +154,7 @@ describe('AudioEngine - Property-Based Tests', () => {
         const mockTriggerAttack = vi.fn();
         const mockTriggerRelease = vi.fn();
         
-        // @ts-expect-error - Accessing private property for testing
-        audioEngine._isLoaded = true;
+        // Mock the sampler for this test iteration
         // @ts-expect-error - Accessing private property for testing
         audioEngine.sampler = {
           triggerAttack: mockTriggerAttack,
@@ -177,10 +195,7 @@ describe('AudioEngine - Property-Based Tests', () => {
    * intermediate notes. This test verifies that this mechanism works for any note.
    */
   it('Property 8: Sample playback with pitch adjustment - all notes playable regardless of direct sample availability', () => {
-    if (!audioEngine) {
-      console.log('Skipping property test: AudioEngine not available in test environment');
-      return;
-    }
+    expect(audioEngine).not.toBeNull();
 
     // Generator for all valid piano notes across the full range
     // Piano notes: A0 to C8 (88 keys on a standard piano)
@@ -213,9 +228,7 @@ describe('AudioEngine - Property-Based Tests', () => {
         const mockTriggerAttack = vi.fn();
         const mockTriggerRelease = vi.fn();
         
-        // Simulate loaded state for testing
-        // @ts-expect-error - Accessing private property for testing
-        audioEngine._isLoaded = true;
+        // Mock the sampler for this test iteration
         // @ts-expect-error - Accessing private property for testing
         audioEngine.sampler = {
           triggerAttack: mockTriggerAttack,
