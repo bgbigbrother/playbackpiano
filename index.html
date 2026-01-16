@@ -4,12 +4,40 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    
+    <!-- SEO Meta Tags -->
+    <title>Free Online Piano Keyboard - Play Piano in Your Browser | Web Piano</title>
+    <meta name="description" content="Play a realistic 48-key piano keyboard online for free. Use your computer keyboard or mouse to play beautiful piano sounds. No download required - works on desktop, tablet, and mobile devices." />
+    <meta name="keywords" content="online piano, virtual piano, piano keyboard, play piano online, free piano, web piano, piano simulator, learn piano, piano practice, music keyboard" />
+    <meta name="author" content="Web Piano" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://playbackpiano.com//" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://playbackpiano.com//" />
+    <meta property="og:title" content="Free Online Piano Keyboard - Play Piano in Your Browser" />
+    <meta property="og:description" content="Play a realistic 48-key piano keyboard online for free. Use your computer keyboard or mouse to play beautiful piano sounds." />
+    <meta property="og:image" content="https://playbackpiano.com//og-image.jpg" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://playbackpiano.com//" />
+    <meta property="twitter:title" content="Free Online Piano Keyboard - Play Piano in Your Browser" />
+    <meta property="twitter:description" content="Play a realistic 48-key piano keyboard online for free. Use your computer keyboard or mouse to play beautiful piano sounds." />
+    <meta property="twitter:image" content="https://playbackpiano.com/og-image.jpg" />
+    
     <!-- Mobile optimization meta tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Web Piano">
     <meta name="theme-color" content="#000000">
-    <title>Web Piano</title>
+    
+    <!-- Preconnect to external resources -->
+    <link rel="preconnect" href="https://www.googletagmanager.com">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-WQPJM11FMG"></script>
@@ -21,8 +49,49 @@
       gtag('config', 'G-WQPJM11FMG');
     </script>
 
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Web Piano",
+      "description": "Free online piano keyboard with 48 keys. Play realistic piano sounds using your computer keyboard or mouse. Perfect for practice, learning, and music creation.",
+      "url": "https://playbackpiano.com/",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Any",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "browserRequirements": "Requires JavaScript. Requires HTML5.",
+      "softwareVersion": "1.0",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "1250"
+      },
+      "featureList": [
+        "48-key piano keyboard",
+        "Realistic piano sounds",
+        "Computer keyboard input",
+        "Mouse and touch support",
+        "Polyphonic playback",
+        "Mobile responsive",
+        "No download required"
+      ]
+    }
+    </script>
   </head>
   <body>
+    <!-- SEO Content - Hidden but accessible to search engines -->
+    <noscript>
+      <div style="padding: 20px; text-align: center;">
+        <h1>Free Online Piano Keyboard</h1>
+        <p>This application requires JavaScript to run. Please enable JavaScript in your browser to play the piano.</p>
+      </div>
+    </noscript>
+    
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

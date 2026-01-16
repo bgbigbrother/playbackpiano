@@ -11,6 +11,7 @@ import { initializeKeyboardMapping } from './utils/keyboardLayout';
 import { debugLogger } from './utils/debugLogger';
 import { debugConfig } from './config/debugConfig';
 import './utils/performanceMonitor'; // Initialize performance monitoring
+import { SEOContent } from './components';
 
 const theme = createTheme({
   palette: {
@@ -235,6 +236,7 @@ function App() {
           minHeight: ['100vh', '100dvh'], // Use dynamic viewport height when supported, fallback to 100vh
         }}
       >
+        <SEOContent isMinimized={true} />
         {/* Show loading indicator when loading or has error */}
         {(loadingState.isLoading || loadingState.hasError) && (
           <LoadingIndicator

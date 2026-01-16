@@ -11,6 +11,7 @@ export { NoteLoggerControls, type NoteLoggerControlsProps } from './NoteLoggerCo
 export { MetronomeControls, type MetronomeControlsProps } from './MetronomeControls';
 export { LabelToggleControls, type LabelToggleControlsProps } from './LabelToggleControls';
 export { AudioRecorderControls, type AudioRecorderControlsProps } from './AudioRecorderControls';
+export { SEOContent } from './SEOContent';
 
 // Error Boundary Components
 export { AudioRecorderErrorBoundary, useAudioRecordingSupport } from './AudioRecorderErrorBoundary';
